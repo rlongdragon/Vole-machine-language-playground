@@ -1,0 +1,479 @@
+<!DOCTYPE html>
+<html lang="zh-tw">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Vole Machine Language Playground</title>
+  <style>
+    p {
+      margin: 0;
+      margin-bottom: 0.3em;
+    }
+
+    .mono {
+      font-family: monospace;
+      font-size: 1.5em;
+    }
+    [highLight=true] {
+      background-color: black;
+      background-clip: content-box;
+      color: white;
+    }
+  </style>
+</head>
+
+<body style="padding: 30px;">
+  <h1>Vole Machine Language Playground</h1>
+  <h2>Op-code</h2>
+  <table>
+    <thead>
+      <tr>
+        <th>Op-code</th>
+        <th>Operand</th>
+        <th>Description</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>0x1</td>
+        <td>RXY</td>
+        <td>LOAD the register R with the bit pattern found in the memory cell whose address is XY. <br> Example: 0x14A3
+          would cause the contents of the memory cell located at address 0xA3 to be placed in register 0x4.</td>
+      </tr>
+      <tr>
+        <td>0x2</td>
+        <td>RXY</td>
+        <td>LOAD the register R with the bit pattern XY. <br> Example: 0x20A3 would cause the value 0xA3 to be placed in
+          register 0.</td>
+      </tr>
+      <tr>
+        <td>0x3</td>
+        <td>RXY</td>
+        <td>STORE the bit pattern found in register R in the memory cell whose address is XY. <br> Example: 0x35B1 would
+          cause the contents of register 0x5 to be placed in the memory cell whose address is 0xB1.</td>
+      </tr>
+      <tr>
+        <td>0x4</td>
+        <td>0RS</td>
+        <td>MOVE the bit pattern found in register R to register S. <br> Example: 0x40A4 would cause the contents of
+          register 0xA to be copied into register 0x4.</td>
+      </tr>
+      <tr>
+        <td>0x5</td>
+        <td>RST</td>
+        <td>ADD the bit patterns in registers S and T as though they were two’s complement representations and leave the
+          result in register R. <br> Example: 0x5726 would cause the binary values in registers 0x2 and 0x6 to be added
+          and the sum placed in register 0x7.</td>
+      </tr>
+      <tr>
+        <td>0x6</td>
+        <td>RST</td>
+        <td>ADD the bit patterns in registers S and T as though they represented values in floating-point notation and
+          leave the floating-point result in register R. <br> Example: 0x634E would cause the values in registers 0x4
+          and 0xE to be added as floating-point values and the result to be placed in register 0x3.</td>
+      </tr>
+      <tr>
+        <td>0x7</td>
+        <td>RST</td>
+        <td>OR the bit patterns in registers S and T and place the result in register R. <br> Example: 0x7CB4 would
+          cause the result of ORing the contents of registers 0xB and 0x4 to be placed in register 0xC.</td>
+      </tr>
+      <tr>
+        <td>0x8</td>
+        <td>RST</td>
+        <td>AND the bit patterns in registers S and T and place the result in register R. <br> Example: 0x8045 would
+          cause the result of ANDing the contents of registers 0x4 and 0x5 to be placed in register 0x0.</td>
+      </tr>
+      <tr>
+        <td>0x9</td>
+        <td>RST</td>
+        <td>XOR the bit patterns in registers S and T and place the result in register R. <br> Example: 0x95F3 would
+          cause the result of XORing the contents of registers 0xF and 0x3 to be placed in register 0x5.</td>
+      </tr>
+      <tr>
+        <td>0xA</td>
+        <td>R0X</td>
+        <td>ROTATE the bit pattern in register R one bit to the right X times. Each time, place the bit that started at
+          the low order end at the high-order end. <br> Example: 0xA403 would cause the contents of register 0x4 to be
+          rotated 3 bits to the right in a circular fashion.</td>
+      </tr>
+      <tr>
+        <td>0xB</td>
+        <td>RXY</td>
+        <td>JUMP to the instruction located in the memory cell at address XY if the bit pattern in register R is equal
+          to the bit pattern in register number 0. Otherwise, continue with the normal sequence of execution. (The jump
+          is implemented by copying XY into the program counter during the execute phase.) <br> Example: 0xB43C would
+          first compare the contents of register 0x4 with the contents of register 0x0. If the two were equal, the
+          pattern 0x3C would be placed in the program counter so that the next instruction executed would be the one
+          located at that memory address. Otherwise, nothing would be done and program execution would continue in its
+          normal sequence.</td>
+      </tr>
+      <tr>
+        <td>0xC</td>
+        <td>000</td>
+        <td>HALT execution. <br> Example: 0xC000 would cause program execution to stop.</td>
+      </tr>
+    </tbody>
+  </table>
+  <h2>Playground</h2>
+  <div style="display: flex; min-width: 100%">
+    <div>
+      <h3>machine</h3>
+      <div style=" font-family: monospace; font-size: 1.5em;">
+        <div>
+          <input type="button" value="RUN" id="RUN" />
+          <input type="button" value="PAUSE" id="PAUSE" />
+          <input type="button" value="STEP" id="STEP" />
+          <input type="button" value="LOAD" id="LOAD" />
+          <input type="button" value="RESET" id="RESET" />
+        </div>
+      </div>
+      <hr>
+      <div style="font-size: 1em;">
+        <p class="mono">program counter: 0x <span id="hex-pc">00</span> | 0b <span id="bin-pc">0000 0000</span></p>
+        <div style="display: flex;" class="mono">
+          <div>
+            <p>registers</p>
+            <table>
+              <tr>
+                <td>0</td>
+                <td>0x<span class="register-cell">00</span>
+              </tr>
+              <tr>
+                <td>1</td>
+                <td>0x<span class="register-cell">00</span>
+              </tr>
+              <tr>
+                <td>2</td>
+                <td>0x<span class="register-cell">00</span>
+              </tr>
+              <tr>
+                <td>3</td>
+                <td>0x<span class="register-cell">00</span>
+              </tr>
+              <tr>
+                <td>4</td>
+                <td>0x<span class="register-cell">00</span>
+              </tr>
+              <tr>
+                <td>5</td>
+                <td>0x<span class="register-cell">00</span>
+              </tr>
+              <tr>
+                <td>6</td>
+                <td>0x<span class="register-cell">00</span>
+              </tr>
+              <tr>
+                <td>7</td>
+                <td>0x<span class="register-cell">00</span>
+              </tr>
+              <tr>
+                <td>8</td>
+                <td>0x<span class="register-cell">00</span>
+                </td>
+              </tr>
+              <tr>
+                <td>9</td>
+                <td>0x<span class="register-cell">00</span>
+              </tr>
+              <tr>
+                <td>A</td>
+                <td>0x<span class="register-cell">00</span>
+              </tr>
+              <tr>
+                <td>B</td>
+                <td>0x<span class="register-cell">00</span>
+              </tr>
+              <tr>
+                <td>C</td>
+                <td>0x<span class="register-cell">00</span>
+              </tr>
+              <tr>
+                <td>D</td>
+                <td>0x<span class="register-cell">00</span>
+              </tr>
+              <tr>
+                <td>E</td>
+                <td>0x<span class="register-cell">00</span>
+              </tr>
+              <tr>
+                <td>F</td>
+                <td>0x<span class="register-cell">00</span>
+              </tr>
+            </table>
+          </div>
+          <div style="margin-left: 20px;">
+            <style>
+              td+td {
+                padding-left: 15px;
+              }
+            </style>
+            <p>memory</p>
+            <div id="memory-table"></div>
+          </div>
+
+        </div>
+      </div>
+
+    </div>
+    <div style="margin-left: 20px;">
+      <h3>editor</h3>
+      <textarea style="width: 100%; font-family: monospace; font-size: 1.5em;" id="code"></textarea>
+
+    </div>
+  </div>
+  <script>
+    // variable
+    let isRunning = false
+    let programCounter = 0
+    let instruction = ""
+    let delay = 100
+  </script>
+  <script>
+    // generate memory table
+    let element = document.getElementById("memory-table");
+    table = "<table>"
+    for (let i = 0; i < 16; i++) {
+      table += "<tr>"
+      table += `<td>00 - 0F</td>`
+      for (let i = 0; i < 16; i++) {
+        table += `<td class="memory-cell">00</td>`
+      }
+      table += `<td class="memory-cell-ascii">←←←←←←←←←←←←←←←←</td>`
+      table += "</tr>"
+    }
+
+    table += "</table>"
+    element.innerHTML = table;
+  </script>
+  <script>
+
+  </script>
+  <script>
+    function numberToAscii(number) {
+      return String.fromCharCode(number);
+    }
+
+    function hexToDec(n) {
+      return parseInt(n, 16);
+    }
+
+    function hexToBin(hex) {
+      return ((x) => {
+        while (x.length < 8) {
+          x = "0" + x
+        }
+        return x
+      }
+      )(parseInt(hex, 16).toString(2));
+    }
+
+    function AND(a, b) {
+      if (a == 1 && b == 1) {
+        return 1;
+      } else {
+        return 0;
+      }
+    }
+    function OR(a, b) {
+      if (a == 1 || b == 1) {
+        return 1;
+      } else {
+        return 0;
+      }
+    }
+    function XOR(a, b) {
+      if (a == b) {
+        return 0;
+      } else {
+        return 1;
+      }
+    }
+  </script>
+  <script>
+    function ADD1(a, b) {
+      a = hexToBin(a)
+      b = hexToBin(b)
+      s = ""
+      c = "0"
+      console.log(a)
+      console.log(b)
+
+      // function adder(a, b) {
+      //   return [AND(a, b), XOR(a, b)]
+      // }
+      function fullAdder(a, b, c) {
+        let sum = XOR(XOR(a, b), c)
+        let carry = OR(AND(a, b), AND(XOR(a, b), c))
+        return [sum, carry]
+      }
+
+      for (let i = 7; i >= 0; i--) {
+        addr = fullAdder(a[i], b[i], c)
+        console.log(a[i], b[i], addr)
+        s += addr[0]
+        c = addr[1]
+      }
+
+      s = s.split("").reverse().join("")
+      // console.log(s)
+      return parseInt(s, 2).toString(16).toUpperCase().padStart(2, "0")
+    }
+  </script>
+  <script>
+    // update ascii 
+    function updateAscii() {
+      let memoryCells = document.querySelectorAll(".memory-cell");
+      let ascii = document.querySelectorAll(".memory-cell-ascii");
+
+      for (let i = 0; i < 16; i++) {
+        let str = ""
+        for (let j = 0; j < 16; j++) {
+          str += numberToAscii(parseInt(memoryCells[i * 16 + j].innerText, 16))
+        }
+        // replace " " to "←"
+        str = str.replace(/\s/g, "←")
+        ascii[i].innerText = str;
+      }
+    }
+    // load code to memory
+    document.getElementById("LOAD").addEventListener("click", () => {
+      if (isRunning) return;
+
+      let code = document.getElementById("code").value;
+      let memoryCells = document.querySelectorAll(".memory-cell");
+
+
+      // remove all blank chr
+      code = code.replace(/\s/g, "");
+
+      // check chr in a-f A-F and 0-9
+      const regex = /^[A-Fa-f0-9]+$/;
+      if (!regex.test(code)) {
+        alert("invalid hex");
+      }
+
+
+      if (code.length == 0) return;
+
+      if (code.length % 2 == 1) {
+        code += "0";
+      }
+
+      for (let i = 0; i < code.length / 2; i++) {
+        memoryCells[i].innerText = code.slice(i * 2, i * 2 + 2).toUpperCase();
+      }
+
+      updateAscii();
+    })
+  </script>
+  <script>
+    function highLight () {
+      for (i of document.querySelectorAll(".memory-cell")) {
+        i.setAttribute("highLight", false)
+      }
+      document.querySelectorAll(".memory-cell")[programCounter].setAttribute("highLight", true)
+    }
+    function step() {
+      highLight()
+      document.getElementById("hex-pc").innerText = ((x) => x.slice(2, 4))((programCounter + 1).toString(16).padStart(4, "0").toUpperCase())
+      document.getElementById("bin-pc").innerText = ((x) => x.slice(8, 12) + " " + x.slice(12, 16))((programCounter + 1).toString(2).padStart(16, "0"))
+      console.log(document.querySelectorAll(".memory-cell")[programCounter].innerText)
+      if (instruction == "") {
+        instruction = document.querySelectorAll(".memory-cell")[programCounter].innerText
+      } else {
+        console.log(2)
+        action = instruction[0]
+        let arg = document.querySelectorAll(".memory-cell")[programCounter].innerText
+        console.log(instruction + arg)
+        switch (action) {
+          case "0":
+            isRunning = false
+            break;
+          case "1":
+            r = instruction[1]
+            x = arg[0]
+            y = arg[1]
+            document.querySelectorAll(".register-cell")[hexToDec(r)].innerText = document.querySelectorAll(".memory-cell")[hexToDec(x + y)].innerText
+            instruction = ""
+            break;
+          case "2":
+            r = instruction[1]
+            document.querySelectorAll(".register-cell")[hexToDec(r)].innerText = arg
+            instruction = ""
+            break;
+          case "3":
+            r = instruction[1]
+            x = arg[0]
+            y = arg[1]
+            document.querySelectorAll(".memory-cell")[hexToDec(x + y)].innerText = document.querySelectorAll(".register-cell")[hexToDec(r)].innerText
+            instruction = ""
+            break;
+          case "4":
+            r = arg[0]
+            s = arg[1]
+            document.querySelectorAll(".register-cell")[hexToDec(s)].innerText = document.querySelectorAll(".register-cell")[hexToDec(r)].innerText
+            instruction = ""
+            break;
+          case "5":
+            r = instruction[1]
+            s = arg[0]
+            t = arg[1]
+            console.log(document.querySelectorAll(".register-cell")[hexToDec(s)].innerText, document.querySelectorAll(".register-cell")[hexToDec(t)].innerText)
+            document.querySelectorAll(".register-cell")[hexToDec(r)].innerText = ADD1(document.querySelectorAll(".register-cell")[hexToDec(s)].innerText, document.querySelectorAll(".register-cell")[hexToDec(t)].innerText)
+            instruction = ""
+            break;
+          case "6":
+            break;
+          case "7":
+            break;
+          case "8":
+            break;
+          case "9":
+            break;
+          case "A":
+            break;
+          case "B":
+            break;
+          case "C":
+            isRunning = false
+            break;
+          default:
+            alert("invalid instruction")
+            break;
+        }
+      }
+      console.log(programCounter)
+
+      updateAscii()
+      programCounter++
+    }
+  </script>
+  <script>
+    document.getElementById("PAUSE").addEventListener("click", () => {
+      isRunning = false
+    })
+  </script>
+  <script>
+    document.getElementById("STEP").addEventListener("click", () => {
+      isRunning = true
+      step()
+      isRunning = false
+    })
+  </script>
+  <script>
+    document.getElementById("RUN").addEventListener("click", () => {
+      isRunning = true
+      let runner = setInterval(() => {
+        step()
+
+        if (!isRunning || programCounter > 254) {
+          clearInterval(runner)
+        }
+      }, delay)
+    })
+  </script>
+</body>
+
+</html>
