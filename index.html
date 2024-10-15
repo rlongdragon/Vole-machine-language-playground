@@ -236,7 +236,7 @@
     table = "<table>"
     for (let i = 0; i < 16; i++) {
       table += "<tr>"
-      table += `<td>00 - 0F</td>`
+      table += `<td>${((x)=> x.length >= 2 ? x : "0" + x)((i * 16).toString(16).toUpperCase())} - ${((x)=> x.length >= 2 ? x : "0" + x)((i * 16 + 15).toString(16).toUpperCase())}</td>`
       for (let i = 0; i < 16; i++) {
         table += `<td class="memory-cell">00</td>`
       }
@@ -246,9 +246,6 @@
 
     table += "</table>"
     element.innerHTML = table;
-  </script>
-  <script>
-
   </script>
   <script>
     function numberToAscii(number) {
@@ -369,6 +366,41 @@
     })
   </script>
   <script>
+    // memory and register operate
+
+    // hightLight
+    function flashing(element) {
+      element.setAttribute("highLight", true)
+      setTimeout(() => {
+        element.setAttribute("highLight", false)
+      }, delay);
+    }
+
+    function getMemory(address) {
+      let element =  document.querySelectorAll(".memory-cell")[address]
+      flashing(element)
+      return element.innerText;
+    }
+
+    function setMemory(address, value) {
+      let element =  document.querySelectorAll(".memory-cell")[address]
+      element.innerText = value;
+      flashing(element)
+    }
+
+    function getRegister(register) {
+      let element =  document.querySelectorAll(".register-cell")[register]
+      flashing(element)
+      return element.innerText;
+    }
+
+    function setRegister(register, value) {
+      let element =  document.querySelectorAll(".register-cell")[register]
+      element.innerText = value;
+      flashing(element)
+    }
+  </script>
+  <script>
     function highLight () {
       for (i of document.querySelectorAll(".memory-cell")) {
         i.setAttribute("highLight", false)
@@ -395,33 +427,32 @@
             r = instruction[1]
             x = arg[0]
             y = arg[1]
-            document.querySelectorAll(".register-cell")[hexToDec(r)].innerText = document.querySelectorAll(".memory-cell")[hexToDec(x + y)].innerText
+            setRegister(hexToDec(r), getMemory(hexToDec(x + y)))
             instruction = ""
             break;
           case "2":
             r = instruction[1]
-            document.querySelectorAll(".register-cell")[hexToDec(r)].innerText = arg
+            setRegister(hexToDec(r), arg)
             instruction = ""
             break;
           case "3":
             r = instruction[1]
             x = arg[0]
             y = arg[1]
-            document.querySelectorAll(".memory-cell")[hexToDec(x + y)].innerText = document.querySelectorAll(".register-cell")[hexToDec(r)].innerText
+            setMemory(hexToDec(x + y), getRegister(hexToDec(r)))
             instruction = ""
             break;
           case "4":
             r = arg[0]
             s = arg[1]
-            document.querySelectorAll(".register-cell")[hexToDec(s)].innerText = document.querySelectorAll(".register-cell")[hexToDec(r)].innerText
+            setRegister(hexToDec(s), getRegister(hexToDec(r)))
             instruction = ""
             break;
           case "5":
             r = instruction[1]
             s = arg[0]
             t = arg[1]
-            console.log(document.querySelectorAll(".register-cell")[hexToDec(s)].innerText, document.querySelectorAll(".register-cell")[hexToDec(t)].innerText)
-            document.querySelectorAll(".register-cell")[hexToDec(r)].innerText = ADD1(document.querySelectorAll(".register-cell")[hexToDec(s)].innerText, document.querySelectorAll(".register-cell")[hexToDec(t)].innerText)
+            setRegister(hexToDec(r), ADD1(getRegister(hexToDec(s)), getRegister(hexToDec(t))))
             instruction = ""
             break;
           case "6":
@@ -451,18 +482,32 @@
     }
   </script>
   <script>
+    document.getElementById("RESET").addEventListener("click", () => {
+      isRunning = false
+      programCounter = 0
+      document.getElementById("hex-pc").innerText = "00"
+      document.getElementById("bin-pc").innerText = "0000 0000"
+      instruction = ""
+      for (let i of document.querySelectorAll(".register-cell")) {
+        i.innerText = "00"
+      }
+      for (let i of document.querySelectorAll(".memory-cell")) {
+        i.innerText = "00"
+        i.setAttribute("highLight", false)
+      }
+      updateAscii()
+    })
+
     document.getElementById("PAUSE").addEventListener("click", () => {
       isRunning = false
     })
-  </script>
-  <script>
+
     document.getElementById("STEP").addEventListener("click", () => {
       isRunning = true
       step()
       isRunning = false
     })
-  </script>
-  <script>
+    
     document.getElementById("RUN").addEventListener("click", () => {
       isRunning = true
       let runner = setInterval(() => {
