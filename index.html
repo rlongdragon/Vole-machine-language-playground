@@ -256,6 +256,10 @@
       return parseInt(n, 16);
     }
 
+    function binToDec(n) {
+      return parseInt(n, 2);
+    } 
+
     function hexToBin(hex) {
       return ((x) => {
         while (x.length < 8) {
@@ -264,6 +268,17 @@
         return x
       }
       )(parseInt(hex, 16).toString(2));
+    }
+
+    function binToHex(bin) {
+      return parseInt(bin, 2).toString(16).toUpperCase();
+    }
+
+    function complement (a) {
+      for (let i = 0; i < a.length; i++) {
+        a[i] = XOR(a[i], 1)
+      }
+      a = hexToBin(ADD1(binToHex(a), "1"))
     }
 
     function AND(a, b) {
@@ -290,12 +305,8 @@
   </script>
   <script>
     function ADD1(a, b) {
-      a = hexToBin(a)
-      b = hexToBin(b)
-      s = ""
-      c = "0"
-      console.log(a)
-      console.log(b)
+      let s = ""
+      let c = "0"
 
       // function adder(a, b) {
       //   return [AND(a, b), XOR(a, b)]
@@ -306,17 +317,39 @@
         return [sum, carry]
       }
 
-      for (let i = 7; i >= 0; i--) {
+      for (let i = a.length - 1; i >= 0; i--) {
         addr = fullAdder(a[i], b[i], c)
-        console.log(a[i], b[i], addr)
         s += addr[0]
         c = addr[1]
       }
 
       s = s.split("").reverse().join("")
       // console.log(s)
-      return parseInt(s, 2).toString(16).toUpperCase().padStart(2, "0")
+      return s
     }
+
+    function ADD2(a, b) {
+      // // float: 0 000 0000
+      // a = hexToBin(a)
+      // let a_pattern = [a[0], a.slice(1, 4), a.slice(4, 8)]
+      // b = hexToBin(b)
+      // let b_pattern = [b[0], b.slice(1, 4), b.slice(4, 8)]
+      // let s = ""
+
+      // // S000.0000XXXX 
+      // // SXXX.X0000000
+      // // -4           3
+      
+      // ADD1(((x)=>{
+      //   if 
+      // })("0".repeat(7-binToDec(a_pattern[1])) + a_pattern[2] + "0".repeat(binToDec(b_pattern[1])))
+      // )
+
+
+      // b_sign = b[0]
+      // https://blog.csdn.net/Phoenix_ZengHao/article/details/118760774
+    }
+
   </script>
   <script>
     // update ascii 
@@ -415,10 +448,8 @@
       if (instruction == "") {
         instruction = document.querySelectorAll(".memory-cell")[programCounter].innerText
       } else {
-        console.log(2)
         action = instruction[0]
         let arg = document.querySelectorAll(".memory-cell")[programCounter].innerText
-        console.log(instruction + arg)
         switch (action) {
           case "0":
             isRunning = false
@@ -452,20 +483,85 @@
             r = instruction[1]
             s = arg[0]
             t = arg[1]
-            setRegister(hexToDec(r), ADD1(getRegister(hexToDec(s)), getRegister(hexToDec(t))))
+            setRegister(hexToDec(r), binToHex(ADD1(hexToBin(getRegister(hexToDec(s))), hexToBin(getRegister(hexToDec(t))))).padStart(2, "0"))
             instruction = ""
             break;
           case "6":
+            alert("我不會浮點數運算ww")
+            // r = instruction[1]
+            // s = arg[0]
+            // t = arg[1]
+            // setRegister(hexToDec(r), binToHex(ADD2(hexToBin(getRegister(hexToDec(s))), hexToBin(getRegister(hexToDec(t))))).padStart(2, "0"))
+            instruction = ""
             break;
           case "7":
+            r = instruction[1]
+            s = arg[0]
+            t = arg[1]
+
+            bit = ""
+            
+            s_pattern = hexToBin(getRegister(hexToDec(s)))
+            t_pattern = hexToBin(getRegister(hexToDec(t)))
+
+            for(let i = 0; i < s_pattern.length; i++) {
+              bit += OR(s_pattern[i], t_pattern[i])
+            }
+
+            setRegister(hexToDec(r), binToHex(bit))
+            instruction = ""
             break;
           case "8":
+            r = instruction[1]
+            s = arg[0]
+            t = arg[1]
+
+            bit = ""
+            
+            s_pattern = hexToBin(getRegister(hexToDec(s)))
+            t_pattern = hexToBin(getRegister(hexToDec(t)))
+
+            for(let i = 0; i < s_pattern.length; i++) {
+              bit += AND(s_pattern[i], t_pattern[i])
+            }
+
+            setRegister(hexToDec(r), binToHex(bit))
+            instruction = ""
             break;
           case "9":
+            r = instruction[1]
+            s = arg[0]
+            t = arg[1]
+
+            bit = ""
+            
+            s_pattern = hexToBin(getRegister(hexToDec(s)))
+            t_pattern = hexToBin(getRegister(hexToDec(t)))
+
+            for(let i = 0; i < s_pattern.length; i++) {
+              bit += XOR(s_pattern[i], t_pattern[i])
+            }
+
+            setRegister(hexToDec(r), binToHex(bit))
+            instruction = ""
             break;
           case "A":
+            r = instruction[1]
+            x = hexToDec(arg[1])
+            
+            r_pattern = hexToBin(getRegister(hexToDec(r)))
+
+            setRegister(hexToDec(r), binToHex(r_pattern.slice(x%r_pattern.length, r_pattern.length) + r_pattern.slice(0, x%r_pattern.length)))
+            instruction = ""
             break;
           case "B":
+            r = instruction[1]
+            x = arg[0]
+            y = arg[1]
+            if (getRegister(hexToDec(r)) == "00") {
+              programCounter = hexToDec(x + y)
+            }
+            instruction = ""
             break;
           case "C":
             isRunning = false
@@ -475,7 +571,6 @@
             break;
         }
       }
-      console.log(programCounter)
 
       updateAscii()
       programCounter++
