@@ -15,10 +15,18 @@
       font-family: monospace;
       font-size: 1.5em;
     }
+
     [highLight=true] {
       background-color: black;
       background-clip: content-box;
       color: white;
+    }
+
+    .register-cell:hover,
+    .memory-cell:hover {
+      outline: rgb(184, 184, 184) 5px solid;
+      border-radius: 2px;
+      box-sizing: content-box;
     }
   </style>
 </head>
@@ -26,10 +34,10 @@
 <body style="padding: 30px;">
   <h1>Vole Machine Language Playground</h1>
   <h2>Op-code</h2>
-  <table>
+  <table border="3" style="border-collapse:collapse">
     <thead>
       <tr>
-        <th>Op-code</th>
+        <th>code</th>
         <th>Operand</th>
         <th>Description</th>
       </tr>
@@ -217,12 +225,37 @@
       </div>
 
     </div>
-    <div style="margin-left: 20px;">
+    <div style="margin-left: 20px; height: 100">
       <h3>editor</h3>
-      <textarea style="width: 100%; font-family: monospace; font-size: 1.5em;" id="code"></textarea>
+      <textarea style="width: 80px; height: 500px; font-family: monospace; font-size: 1.5em;" id="code">
+2001
+2101
+
+2E03
+2D01
+2CFF
+9EEC
+5EED
+
+5210
+4010
+4021
+
+5FFD
+5BFE
+
+BB1B
+BA0D
+
+32FF
+C000
+      </textarea>
 
     </div>
   </div>
+  <div
+    style="position: fixed; top:0; left:0; opacity: 0; background-color: rgba(211, 211, 211, 0.664); padding: 5px; border-radius: 5px; backdrop-filter: blur(3px); transition: opacity 0.3s ease-in-out; font-family: monospace;"
+    id="tag">123</div>
   <script>
     // variable
     let isRunning = false
@@ -236,9 +269,9 @@
     table = "<table>"
     for (let i = 0; i < 16; i++) {
       table += "<tr>"
-      table += `<td>${((x)=> x.length >= 2 ? x : "0" + x)((i * 16).toString(16).toUpperCase())} - ${((x)=> x.length >= 2 ? x : "0" + x)((i * 16 + 15).toString(16).toUpperCase())}</td>`
+      table += `<td>${((x) => x.length >= 2 ? x : "0" + x)((i * 16).toString(16).toUpperCase())} - ${((x) => x.length >= 2 ? x : "0" + x)((i * 16 + 15).toString(16).toUpperCase())}</td>`
       for (let i = 0; i < 16; i++) {
-        table += `<td class="memory-cell">00</td>`
+        table += `<td><span class="memory-cell">00</span></td>`
       }
       table += `<td class="memory-cell-ascii">←←←←←←←←←←←←←←←←</td>`
       table += "</tr>"
@@ -246,6 +279,20 @@
 
     table += "</table>"
     element.innerHTML = table;
+  </script>
+  <script>
+    let tag = document.getElementById("tag")
+    for (let i of document.querySelectorAll(".register-cell, .memory-cell")) {
+      i.addEventListener("mousemove", (e) => {
+        tag.style.opacity = "1"
+        tag.style.top = e.clientY - 20 + "px"
+        tag.style.left = e.clientX + 20 + "px"
+        tag.innerText = "0b " + hexToBin(i.innerText) + " | 0d " + hexToDec(i.innerText)
+      })
+      i.addEventListener("mouseout", (e) => {
+        tag.style.opacity = "0"
+      })
+    }
   </script>
   <script>
     function numberToAscii(number) {
@@ -258,7 +305,7 @@
 
     function binToDec(n) {
       return parseInt(n, 2);
-    } 
+    }
 
     function hexToBin(hex) {
       return ((x) => {
@@ -274,7 +321,7 @@
       return parseInt(bin, 2).toString(16).toUpperCase();
     }
 
-    function complement (a) {
+    function complement(a) {
       for (let i = 0; i < a.length; i++) {
         a[i] = XOR(a[i], 1)
       }
@@ -339,7 +386,7 @@
       // // S000.0000XXXX 
       // // SXXX.X0000000
       // // -4           3
-      
+
       // ADD1(((x)=>{
       //   if 
       // })("0".repeat(7-binToDec(a_pattern[1])) + a_pattern[2] + "0".repeat(binToDec(b_pattern[1])))
@@ -410,31 +457,31 @@
     }
 
     function getMemory(address) {
-      let element =  document.querySelectorAll(".memory-cell")[address]
+      let element = document.querySelectorAll(".memory-cell")[address]
       flashing(element)
       return element.innerText;
     }
 
     function setMemory(address, value) {
-      let element =  document.querySelectorAll(".memory-cell")[address]
+      let element = document.querySelectorAll(".memory-cell")[address]
       element.innerText = value;
       flashing(element)
     }
 
     function getRegister(register) {
-      let element =  document.querySelectorAll(".register-cell")[register]
+      let element = document.querySelectorAll(".register-cell")[register]
       flashing(element)
       return element.innerText;
     }
 
     function setRegister(register, value) {
-      let element =  document.querySelectorAll(".register-cell")[register]
+      let element = document.querySelectorAll(".register-cell")[register]
       element.innerText = value;
       flashing(element)
     }
   </script>
   <script>
-    function highLight () {
+    function highLight() {
       for (i of document.querySelectorAll(".memory-cell")) {
         i.setAttribute("highLight", false)
       }
@@ -444,7 +491,7 @@
       highLight()
       document.getElementById("hex-pc").innerText = ((x) => x.slice(2, 4))((programCounter + 1).toString(16).padStart(4, "0").toUpperCase())
       document.getElementById("bin-pc").innerText = ((x) => x.slice(8, 12) + " " + x.slice(12, 16))((programCounter + 1).toString(2).padStart(16, "0"))
-      console.log(document.querySelectorAll(".memory-cell")[programCounter].innerText)
+      // console.log(document.querySelectorAll(".memory-cell")[programCounter].innerText)
       if (instruction == "") {
         instruction = document.querySelectorAll(".memory-cell")[programCounter].innerText
       } else {
@@ -487,7 +534,7 @@
             instruction = ""
             break;
           case "6":
-            alert("我不會浮點數運算ww")
+            alert("我還不會浮點數運算 D:")
             // r = instruction[1]
             // s = arg[0]
             // t = arg[1]
@@ -500,11 +547,11 @@
             t = arg[1]
 
             bit = ""
-            
+
             s_pattern = hexToBin(getRegister(hexToDec(s)))
             t_pattern = hexToBin(getRegister(hexToDec(t)))
 
-            for(let i = 0; i < s_pattern.length; i++) {
+            for (let i = 0; i < s_pattern.length; i++) {
               bit += OR(s_pattern[i], t_pattern[i])
             }
 
@@ -517,11 +564,11 @@
             t = arg[1]
 
             bit = ""
-            
+
             s_pattern = hexToBin(getRegister(hexToDec(s)))
             t_pattern = hexToBin(getRegister(hexToDec(t)))
 
-            for(let i = 0; i < s_pattern.length; i++) {
+            for (let i = 0; i < s_pattern.length; i++) {
               bit += AND(s_pattern[i], t_pattern[i])
             }
 
@@ -534,11 +581,11 @@
             t = arg[1]
 
             bit = ""
-            
+
             s_pattern = hexToBin(getRegister(hexToDec(s)))
             t_pattern = hexToBin(getRegister(hexToDec(t)))
 
-            for(let i = 0; i < s_pattern.length; i++) {
+            for (let i = 0; i < s_pattern.length; i++) {
               bit += XOR(s_pattern[i], t_pattern[i])
             }
 
@@ -548,10 +595,10 @@
           case "A":
             r = instruction[1]
             x = hexToDec(arg[1])
-            
+
             r_pattern = hexToBin(getRegister(hexToDec(r)))
 
-            setRegister(hexToDec(r), binToHex(r_pattern.slice(x%r_pattern.length, r_pattern.length) + r_pattern.slice(0, x%r_pattern.length)))
+            setRegister(hexToDec(r), binToHex(r_pattern.slice(x % r_pattern.length, r_pattern.length) + r_pattern.slice(0, x % r_pattern.length)))
             instruction = ""
             break;
           case "B":
@@ -602,7 +649,7 @@
       step()
       isRunning = false
     })
-    
+
     document.getElementById("RUN").addEventListener("click", () => {
       isRunning = true
       let runner = setInterval(() => {
